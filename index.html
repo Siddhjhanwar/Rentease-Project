@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RentEase - Furniture & Appliance Rentals</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="nav">
+        <a class="brand" href="#home">RentEase</a>
+        <button class="menu-toggle" id="menuToggle" aria-label="Open navigation">☰</button>
+        <div class="nav-links" id="navLinks">
+          <a href="#catalog">Catalog</a>
+          <a href="#account">Account</a>
+          <a href="#rentals">My Rentals</a>
+          <a href="#support">Support</a>
+          <a href="#admin">Admin</a>
+          <span class="user-pill" id="userPill">Guest</span>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero" id="home">
+        <div class="hero-copy">
+          <p class="eyebrow">Monthly furniture and appliance rentals</p>
+          <h1>Set up your home without buying everything.</h1>
+          <p>
+            Rent beds, sofas, tables, fridges, washing machines, and TVs with flexible tenure plans,
+            delivery scheduling, and maintenance support.
+          </p>
+          <div class="hero-actions">
+            <a class="button primary" href="#catalog">Browse Products</a>
+            <a class="button secondary" href="#admin">View Admin Demo</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="section metrics">
+        <article>
+          <strong id="activeRentalCount">0</strong>
+          <span>Active Rentals</span>
+        </article>
+        <article>
+          <strong id="mrrValue">₹0</strong>
+          <span>Demo MRR</span>
+        </article>
+        <article>
+          <strong id="utilizationValue">0%</strong>
+          <span>Utilization</span>
+        </article>
+      </section>
+
+      <section class="section account-section" id="account">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Account</p>
+            <h2>Register or login</h2>
+          </div>
+        </div>
+        <div class="account-layout">
+          <form class="panel" id="registerForm">
+            <h3>Create account</h3>
+            <label>
+              Name
+              <input type="text" id="registerName" placeholder="Example: Govin Kumar" required />
+            </label>
+            <label>
+              Email
+              <input type="email" id="registerEmail" placeholder="you@example.com" required />
+            </label>
+            <label>
+              Password
+              <input type="password" id="registerPassword" minlength="6" placeholder="At least 6 characters" required />
+            </label>
+            <button class="button primary full" type="submit">Create Demo Account</button>
+          </form>
+
+          <form class="panel" id="loginForm">
+            <h3>Login</h3>
+            <label>
+              Email
+              <input type="email" id="loginEmail" placeholder="you@example.com" required />
+            </label>
+            <label>
+              Password
+              <input type="password" id="loginPassword" required />
+            </label>
+            <button class="button primary full" type="submit">Login</button>
+            <button class="button secondary full" id="logoutButton" type="button">Logout</button>
+            <p class="form-note" id="accountMessage">You are browsing as a guest.</p>
+          </form>
+        </div>
+      </section>
+
+      <section class="section" id="catalog">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Product Catalog</p>
+            <h2>Choose what you need</h2>
+          </div>
+          <div class="filters" aria-label="Product filters">
+            <button class="filter-button active" data-category="All">All</button>
+            <button class="filter-button" data-category="Furniture">Furniture</button>
+            <button class="filter-button" data-category="Appliance">Appliances</button>
+          </div>
+        </div>
+        <div class="product-grid" id="productGrid"></div>
+      </section>
+
+      <section class="section cart-checkout">
+        <div class="panel">
+          <div class="section-heading compact">
+            <div>
+              <p class="eyebrow">Cart</p>
+              <h2>Your rental cart</h2>
+            </div>
+          </div>
+          <div id="cartItems" class="cart-items"></div>
+          <div class="cart-total">
+            <span>Monthly total</span>
+            <strong id="cartTotal">₹0</strong>
+          </div>
+        </div>
+
+        <form class="panel checkout-form" id="checkoutForm">
+          <p class="eyebrow">Checkout</p>
+          <h2>Schedule delivery</h2>
+          <label>
+            Full name
+            <input type="text" id="customerName" placeholder="Example: Asha Sharma" required />
+          </label>
+          <label>
+            Delivery city
+            <select id="deliveryCity" required>
+              <option value="">Select city</option>
+              <option>Bengaluru</option>
+              <option>Hyderabad</option>
+              <option>Pune</option>
+              <option>Delhi NCR</option>
+            </select>
+          </label>
+          <label>
+            Address
+            <textarea id="deliveryAddress" placeholder="Flat, street, area" required></textarea>
+          </label>
+          <label>
+            Delivery date
+            <input type="date" id="deliveryDate" required />
+          </label>
+          <button class="button primary full" type="submit">Place Demo Order</button>
+          <p class="form-note">Payment is marked as “ready for integration” in this beginner version.</p>
+        </form>
+      </section>
+
+      <section class="section" id="rentals">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Customer Area</p>
+            <h2>Active rentals and history</h2>
+          </div>
+        </div>
+        <div id="rentalsList" class="rental-list"></div>
+      </section>
+
+      <section class="section" id="support">
+        <div class="support-layout">
+          <form class="panel" id="maintenanceForm">
+            <p class="eyebrow">Support</p>
+            <h2>Request maintenance</h2>
+            <label>
+              Rental item
+              <select id="maintenanceItem" required></select>
+            </label>
+            <label>
+              Issue type
+              <select id="issueType" required>
+                <option value="">Choose issue</option>
+                <option>Repair needed</option>
+                <option>Pickup request</option>
+                <option>Extension request</option>
+                <option>Damage report</option>
+              </select>
+            </label>
+            <label>
+              Description
+              <textarea id="issueDescription" placeholder="Explain the problem" required></textarea>
+            </label>
+            <button class="button primary full" type="submit">Submit Request</button>
+          </form>
+          <div class="panel">
+            <p class="eyebrow">Requests</p>
+            <h2>Maintenance history</h2>
+            <div id="requestList" class="request-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section admin" id="admin">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Admin Dashboard</p>
+            <h2>Operations overview</h2>
+          </div>
+        </div>
+        <div class="panel admin-access-message" id="adminAccessMessage" aria-live="polite">
+          <h3>Admin access required</h3>
+          <p class="muted">Log in with the demo admin account to manage inventory, rentals, and maintenance requests.</p>
+        </div>
+        <div class="admin-grid" id="adminGrid">
+          <form class="panel" id="productForm">
+            <h3 id="productFormTitle">Add Inventory Item</h3>
+            <input type="hidden" id="productId" />
+            <label>
+              Product name
+              <input type="text" id="productName" placeholder="Example: Dining Table" required />
+            </label>
+            <label>
+              Category
+              <select id="productCategory" required>
+                <option value="">Select category</option>
+                <option>Furniture</option>
+                <option>Appliance</option>
+              </select>
+            </label>
+            <label>
+              Monthly rent
+              <input type="number" id="productRent" min="1" placeholder="799" required />
+            </label>
+            <label>
+              Security deposit
+              <input type="number" id="productDeposit" min="1" placeholder="1600" required />
+            </label>
+            <label>
+              Available stock
+              <input type="number" id="productStock" min="1" placeholder="5" required />
+            </label>
+            <label>
+              Tenure options
+              <input type="text" id="productTenures" value="3, 6, 12" placeholder="Example: 3, 6, 12" required />
+            </label>
+            <button class="button primary full" id="productSubmitButton" type="submit">Add Product</button>
+            <button class="button outline full" id="cancelProductEdit" type="button" hidden>Cancel Edit</button>
+          </form>
+          <div class="panel">
+            <h3>Inventory</h3>
+            <div id="inventoryTable" class="table-like"></div>
+          </div>
+          <div class="panel">
+            <h3>Orders & Rentals</h3>
+            <div id="adminRentals" class="table-like"></div>
+          </div>
+          <div class="panel">
+            <div class="admin-panel-heading">
+              <h3>Maintenance Queue</h3>
+              <span class="queue-note">Update each request as work progresses</span>
+            </div>
+            <div id="adminRequests" class="table-like"></div>
+          </div>
+          <div class="panel">
+            <h3>Service Areas</h3>
+            <ul class="service-areas">
+              <li>Bengaluru</li>
+              <li>Hyderabad</li>
+              <li>Pune</li>
+              <li>Delhi NCR</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="modal-backdrop" id="productModal" aria-hidden="true">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalProductName">
+        <button class="modal-close" id="modalClose" type="button" aria-label="Close product details">×</button>
+        <img class="modal-image" id="modalProductImage" src="" alt="" />
+        <div class="modal-content">
+          <span class="status" id="modalProductCategory"></span>
+          <h2 id="modalProductName"></h2>
+          <p class="muted" id="modalProductDescription"></p>
+          <div class="detail-grid">
+            <div>
+              <span>Monthly rent</span>
+              <strong id="modalProductRent"></strong>
+            </div>
+            <div>
+              <span>Security deposit</span>
+              <strong id="modalProductDeposit"></strong>
+            </div>
+            <div>
+              <span>Available stock</span>
+              <strong id="modalProductStock"></strong>
+            </div>
+            <div>
+              <span>Maintenance</span>
+              <strong>Included</strong>
+            </div>
+          </div>
+          <label>
+            Choose tenure
+            <select id="modalTenure"></select>
+          </label>
+          <div class="modal-actions">
+            <button class="button primary" id="modalAddToCart" type="button">Add to Cart</button>
+            <a class="button secondary" href="#catalog" id="modalBackToCatalog">Back to Catalog</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
