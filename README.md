@@ -1,50 +1,73 @@
-# RentEase - Furniture & Appliance Rental Platform
+# RentEase – Furniture & Appliance Rental Platform
 
-RentEase is a beginner-friendly web project for renting furniture and appliances on monthly plans.
+RentEase is a full-stack rental platform for students and working professionals who need furniture and appliances without the cost and effort of buying them.
 
-This first version is a frontend prototype built with:
+## Features
 
-- HTML for page structure
-- CSS for styling and responsive layout
-- JavaScript for app behavior
-- Browser localStorage for temporary saved data
+### Customer
 
-## How To Run
+- Secure registration and login with JWT sessions
+- Furniture and appliance catalog with category filters
+- Product details, monthly rent, security deposit, tenure plans, and stock availability
+- Cart, checkout, delivery date, city, and address selection
+- Active rentals, extension, pickup scheduling, and rental history
+- Repair, pickup, extension, and damage support requests
 
-Open `index.html` in your browser.
+### Admin
 
-You can also use VS Code with the Live Server extension if you have it installed.
+- Protected admin dashboard
+- Add, edit, and remove inventory products
+- Manage pricing, stock, and custom tenure options
+- Monitor rentals, pickups, returns, and availability
+- Resolve maintenance and damage requests
+- Manage users and service areas
+- Track active rentals, MRR, utilization, retention, and resolution-time KPIs
 
-## What You Can Do
+## Stack
 
-- Register and login with a demo account
-- Browse furniture and appliance products
-- Filter products by category
-- Open product details before adding an item to cart
-- Add products to cart
-- Choose rental tenure and delivery details
-- Place a demo rental order
-- View active rentals
-- Schedule pickup and move returned items into rental history
-- Submit maintenance requests
-- Use the admin dashboard to view inventory, rentals, requests, and KPIs
+- Frontend: HTML5, CSS3, JavaScript
+- Backend: Node.js and Express
+- Database: SQLite (`node:sqlite`)
+- Authentication: JWT and bcryptjs
 
-## Project Files
+## Run locally
 
-- `index.html` contains the visible page sections.
-- `styles.css` controls the design and mobile responsiveness.
-- `app.js` stores sample data and handles all user interactions.
+1. Open PowerShell in this folder.
+2. Install packages:
 
-## Learning Roadmap
+   ```powershell
+   npm.cmd install
+   ```
 
-1. Understand this HTML/CSS/JS version.
-2. Convert it to React components.
-3. Add a Node.js and Express backend.
-4. Store data in MongoDB or PostgreSQL.
-5. Add real login, payments, and deployment.
+3. Start the application:
 
-## Important Beginner Note
+   ```powershell
+   npm.cmd start
+   ```
 
-This version does not use a real backend or payment gateway yet. It is intentionally simple so you can learn how the platform works before adding advanced tools.
+4. Open [http://localhost:3000](http://localhost:3000).
 
-The registration and login feature is only for learning. It stores demo account data in the browser with localStorage. A real project must store users on a backend server and protect passwords with hashing.
+Do not open `index.html` directly for the full-stack version; the Express server must be running.
+
+## Demo admin login
+
+- Email: `admin@rentease.demo`
+- Password: `Admin@123`
+
+## Project documents
+
+- [PRD.md](PRD.md) – product requirements
+- [TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md) – architecture, database, and API reference
+
+## Submission demo flow
+
+1. Register a customer account.
+2. Browse the catalog and place a rental order.
+3. Schedule pickup in My Rentals.
+4. Log in as admin and mark the rental returned.
+5. Submit and resolve a maintenance or damage request.
+6. Show inventory, users, service areas, and analytics in the Admin dashboard.
+
+## Deployment
+
+The app is ready to deploy as one Express web service. Set `JWT_SECRET` in your hosting environment; use `.env.example` as the variable reference. SQLite is suitable for a local submission demo. A production multi-user deployment should use PostgreSQL or MongoDB.

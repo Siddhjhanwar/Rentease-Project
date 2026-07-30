@@ -261,12 +261,19 @@
           </div>
           <div class="panel">
             <h3>Service Areas</h3>
-            <ul class="service-areas">
-              <li>Bengaluru</li>
-              <li>Hyderabad</li>
-              <li>Pune</li>
-              <li>Delhi NCR</li>
-            </ul>
+            <form class="area-form" id="areaForm">
+              <input type="text" id="areaName" placeholder="Add city" required />
+              <button class="button primary compact-button" type="submit">Add</button>
+            </form>
+            <div id="serviceAreas" class="table-like"></div>
+          </div>
+          <div class="panel">
+            <h3>Users</h3>
+            <div id="adminUsers" class="table-like"></div>
+          </div>
+          <div class="panel">
+            <h3>Analytics</h3>
+            <div id="adminAnalytics" class="analytics-grid"></div>
           </div>
         </div>
       </section>

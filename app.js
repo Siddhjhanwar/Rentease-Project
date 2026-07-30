@@ -76,13 +76,21 @@ const demoAdmin = {
 };
 
 let selectedCategory = "All";
-let products = load("renteaseProducts", seedProducts);
+let products = [];
 let cart = load("renteaseCart", []);
-let rentals = load("renteaseRentals", []);
-let requests = load("renteaseRequests", []);
-let users = load("renteaseUsers", []);
+let rentals = [];
+let requests = [];
+let users = [];
+let serviceAreas = [];
+let analytics = null;
 let currentUser = load("renteaseCurrentUser", null);
+let authToken = localStorage.getItem("renteaseToken");
 let selectedProductId = null;
+const API_BASE = window.location.port === "3000"
+  ? "/api"
+  : "http://localhost:3000/api";
+
+if (!authToken) currentUser = null;
 
 const productGrid = document.querySelector("#productGrid");
 const cartItems = document.querySelector("#cartItems");
@@ -93,6 +101,9 @@ const maintenanceItem = document.querySelector("#maintenanceItem");
 const inventoryTable = document.querySelector("#inventoryTable");
 const adminRentals = document.querySelector("#adminRentals");
 const adminRequests = document.querySelector("#adminRequests");
+const adminUsers = document.querySelector("#adminUsers");
+const serviceAreasList = document.querySelector("#serviceAreas");
+const adminAnalytics = document.querySelector("#adminAnalytics");
 const adminGrid = document.querySelector("#adminGrid");
 const adminAccessMessage = document.querySelector("#adminAccessMessage");
 const productFormTitle = document.querySelector("#productFormTitle");
@@ -123,66 +134,63 @@ document.querySelectorAll(".filter-button").forEach((button) => {
   });
 });
 
-document.querySelector("#registerForm").addEventListener("submit", (event) => {
+document.querySelector("#registerForm").addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const name = document.querySelector("#registerName").value.trim();
   const email = document.querySelector("#registerEmail").value.trim().toLowerCase();
   const password = document.querySelector("#registerPassword").value;
-  const existingUser = users.find((user) => user.email === email);
-
-  if (email === demoAdmin.email) {
-    showToast("This email is reserved for the demo admin account.");
-    return;
+  try {
+    const session = await api("/auth/register", { method: "POST", body: { name, email, password } });
+    await startSession(session);
+    event.target.reset();
+    showToast("Account created and logged in.");
+  } catch (error) {
+    showToast(error.message);
   }
-
-  if (existingUser) {
-    showToast("This email is already registered. Please login.");
-    return;
-  }
-
-  const newUser = {
-    id: crypto.randomUUID(),
-    name,
-    email,
-    password
-  };
-
-  users = [newUser, ...users];
-  currentUser = { id: newUser.id, name: newUser.name, email: newUser.email };
-  save("renteaseUsers", users);
-  save("renteaseCurrentUser", currentUser);
-  event.target.reset();
-  renderAll();
-  showToast("Account created and logged in.");
 });
 
-document.querySelector("#loginForm").addEventListener("submit", (event) => {
+document.querySelector("#loginForm").addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const email = document.querySelector("#loginEmail").value.trim().toLowerCase();
   const password = document.querySelector("#loginPassword").value;
-  const user = email === demoAdmin.email && password === demoAdmin.password
-    ? demoAdmin
-    : users.find((item) => item.email === email && item.password === password);
-
-  if (!user) {
-    showToast("Invalid demo login details.");
-    return;
+  try {
+    const session = await api("/auth/login", { method: "POST", body: { email, password } });
+    await startSession(session);
+    event.target.reset();
+    showToast("Logged in successfully.");
+  } catch (error) {
+    showToast(error.message);
   }
-
-  currentUser = { id: user.id, name: user.name, email: user.email, role: user.role || "customer" };
-  save("renteaseCurrentUser", currentUser);
-  event.target.reset();
-  renderAll();
-  showToast("Logged in successfully.");
 });
 
 document.querySelector("#logoutButton").addEventListener("click", () => {
   currentUser = null;
+  authToken = null;
   localStorage.removeItem("renteaseCurrentUser");
+  localStorage.removeItem("renteaseToken");
+  rentals = [];
+  requests = [];
+  users = [];
+  serviceAreas = [];
+  analytics = null;
   renderAll();
   showToast("Logged out.");
+});
+
+document.querySelector("#areaForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!isAdmin()) return;
+  try {
+    await api("/areas", { method: "POST", body: { name: document.querySelector("#areaName").value.trim() } });
+    event.target.reset();
+    await loadRemoteData();
+    renderAll();
+    showToast("Service area added.");
+  } catch (error) {
+    showToast(error.message);
+  }
 });
 
 modalClose.addEventListener("click", closeProductDetails);
@@ -203,7 +211,7 @@ modalAddToCart.addEventListener("click", () => {
   closeProductDetails();
 });
 
-document.querySelector("#checkoutForm").addEventListener("submit", (event) => {
+document.querySelector("#checkoutForm").addEventListener("submit", async (event) => {
   event.preventDefault();
 
   if (!currentUser) {
@@ -217,54 +225,28 @@ document.querySelector("#checkoutForm").addEventListener("submit", (event) => {
     return;
   }
 
-  const unavailableItem = cart.find((item) => {
-    const product = products.find((productItem) => productItem.id === item.productId);
-    return !product || product.stock < 1;
-  });
-
-  if (unavailableItem) {
-    showToast("One of your cart items is no longer available. Please update your cart.");
-    renderAll();
-    return;
-  }
-
   const customerName = document.querySelector("#customerName").value.trim();
   const city = document.querySelector("#deliveryCity").value;
   const address = document.querySelector("#deliveryAddress").value.trim();
   const date = document.querySelector("#deliveryDate").value;
 
-  const newRentals = cart.map((item) => {
-    const product = products.find((productItem) => productItem.id === item.productId);
-    return {
-      id: crypto.randomUUID(),
-      productId: product.id,
-      productName: product.name,
-      monthlyRent: product.rent,
-      tenure: item.tenure,
-      userId: currentUser.id,
-      customerName: customerName || currentUser.name,
-      city,
-      address,
-      deliveryDate: date,
-      status: "Active"
-    };
-  });
-
-  rentals = [...newRentals, ...rentals];
-  products = products.map((product) => {
-    const isOrdered = cart.some((item) => item.productId === product.id);
-    return isOrdered ? { ...product, stock: product.stock - 1 } : product;
-  });
-  cart = [];
-  save("renteaseRentals", rentals);
-  save("renteaseProducts", products);
-  save("renteaseCart", cart);
-  event.target.reset();
-  renderAll();
-  showToast("Demo order placed. Your rental is now active.");
+  try {
+    await api("/rentals", {
+      method: "POST",
+      body: { items: cart, customerName, city, address, deliveryDate: date }
+    });
+    cart = [];
+    save("renteaseCart", cart);
+    event.target.reset();
+    await loadRemoteData();
+    renderAll();
+    showToast("Order placed. Your rental is now active.");
+  } catch (error) {
+    showToast(error.message);
+  }
 });
 
-document.querySelector("#productForm").addEventListener("submit", (event) => {
+document.querySelector("#productForm").addEventListener("submit", async (event) => {
   event.preventDefault();
 
   if (!isAdmin()) {
@@ -278,7 +260,7 @@ document.querySelector("#productForm").addEventListener("submit", (event) => {
     return;
   }
 
-  const productId = Number(document.querySelector("#productId").value);
+  const productId = document.querySelector("#productId").value;
   const productDetails = {
     name: document.querySelector("#productName").value.trim(),
     category: document.querySelector("#productCategory").value,
@@ -290,17 +272,18 @@ document.querySelector("#productForm").addEventListener("submit", (event) => {
     description: "Admin-added rental product with flexible monthly tenure options."
   };
 
-  if (productId) {
-    products = products.map((product) => product.id === productId
-      ? { ...product, ...productDetails }
-      : product);
-  } else {
-    products = [{ id: Date.now(), ...productDetails }, ...products];
+  try {
+    await api(productId ? `/products/${productId}` : "/products", {
+      method: productId ? "PUT" : "POST",
+      body: productDetails
+    });
+    resetProductForm();
+    await loadRemoteData();
+    renderAll();
+    showToast(productId ? "Product updated." : "Product added to inventory.");
+  } catch (error) {
+    showToast(error.message);
   }
-  save("renteaseProducts", products);
-  resetProductForm();
-  renderAll();
-  showToast(productId ? "Product updated." : "Product added to inventory.");
 });
 
 cancelProductEditButton.addEventListener("click", resetProductForm);
@@ -327,25 +310,23 @@ function editProduct(productId) {
   document.querySelector("#productForm").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-function deleteProduct(productId) {
+async function deleteProduct(productId) {
   if (!isAdmin()) {
     showToast("Admin access is required to remove inventory.");
     return;
   }
 
-  const hasRentalRecord = rentals.some((rental) => rental.productId === productId);
-  if (hasRentalRecord) {
-    showToast("Products with rental records cannot be removed.");
-    return;
+  try {
+    await api(`/products/${productId}`, { method: "DELETE" });
+    cart = cart.filter((item) => item.productId !== productId);
+    save("renteaseCart", cart);
+    resetProductForm();
+    await loadRemoteData();
+    renderAll();
+    showToast("Product removed from inventory.");
+  } catch (error) {
+    showToast(error.message);
   }
-
-  products = products.filter((product) => product.id !== productId);
-  cart = cart.filter((item) => item.productId !== productId);
-  save("renteaseProducts", products);
-  save("renteaseCart", cart);
-  resetProductForm();
-  renderAll();
-  showToast("Product removed from inventory.");
 }
 
 function resetProductForm() {
@@ -364,7 +345,7 @@ function getTenureValues(value) {
     .sort((first, second) => first - second);
 }
 
-document.querySelector("#maintenanceForm").addEventListener("submit", (event) => {
+document.querySelector("#maintenanceForm").addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const visibleRentals = getCustomerRentals();
@@ -386,23 +367,103 @@ document.querySelector("#maintenanceForm").addEventListener("submit", (event) =>
     return;
   }
 
-  const request = {
-    id: crypto.randomUUID(),
-    userId: currentUser.id,
-    rentalId: rental.id,
-    productName: rental.productName,
-    type: document.querySelector("#issueType").value,
-    description: document.querySelector("#issueDescription").value.trim(),
-    status: "Open",
-    createdAt: new Date().toLocaleDateString("en-IN")
-  };
-
-  requests = [request, ...requests];
-  save("renteaseRequests", requests);
-  event.target.reset();
-  renderAll();
-  showToast("Maintenance request submitted.");
+  try {
+    await api("/requests", {
+      method: "POST",
+      body: {
+        rentalId: rental.id,
+        type: document.querySelector("#issueType").value,
+        description: document.querySelector("#issueDescription").value.trim()
+      }
+    });
+    event.target.reset();
+    await loadRemoteData();
+    renderAll();
+    showToast("Maintenance request submitted.");
+  } catch (error) {
+    showToast(error.message);
+  }
 });
+
+async function api(path, options = {}) {
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: options.method || "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
+    },
+    ...(options.body ? { body: JSON.stringify(options.body) } : {})
+  });
+  const data = response.status === 204 ? null : await response.json();
+  if (!response.ok) throw new Error(data?.message || "Something went wrong. Please try again.");
+  return data;
+}
+
+async function loadRemoteData() {
+  products = await api("/products");
+  serviceAreas = await api("/areas");
+  cart = cart.filter((item) => products.some((product) => product.id === item.productId));
+  save("renteaseCart", cart);
+  if (!currentUser) return;
+
+  const [rentalData, requestData] = await Promise.all([api("/rentals"), api("/requests")]);
+  rentals = rentalData.map(normalizeRental);
+  requests = requestData.map(normalizeRequest);
+  if (isAdmin()) {
+    [users, analytics] = await Promise.all([api("/users"), api("/analytics")]);
+  }
+}
+
+function normalizeRental(rental) {
+  return {
+    ...rental,
+    productId: rental.product_id ?? rental.productId,
+    userId: rental.user_id ?? rental.userId,
+    productName: rental.product_name ?? rental.productName,
+    monthlyRent: rental.monthly_rent ?? rental.monthlyRent,
+    customerName: rental.customer_name ?? rental.customerName,
+    deliveryDate: rental.delivery_date ?? rental.deliveryDate,
+    pickupDate: rental.pickup_date ?? rental.pickupDate,
+    returnedDate: rental.returned_date ?? rental.returnedDate
+  };
+}
+
+function normalizeRequest(request) {
+  return {
+    ...request,
+    userId: request.user_id ?? request.userId,
+    rentalId: request.rental_id ?? request.rentalId,
+    productName: request.product_name ?? request.productName,
+    damageCharge: request.damage_charge ?? request.damageCharge,
+    createdAt: request.created_at ?? request.createdAt,
+    updatedAt: request.updated_at ?? request.updatedAt
+  };
+}
+
+async function startSession(session) {
+  currentUser = session.user;
+  authToken = session.token;
+  save("renteaseCurrentUser", currentUser);
+  localStorage.setItem("renteaseToken", authToken);
+  await loadRemoteData();
+  renderAll();
+}
+
+async function initializeApp() {
+  try {
+    await loadRemoteData();
+  } catch (error) {
+    if (authToken) {
+      currentUser = null;
+      authToken = null;
+      localStorage.removeItem("renteaseCurrentUser");
+      localStorage.removeItem("renteaseToken");
+      products = await api("/products");
+    }
+    showToast("Unable to connect to the RentEase server.");
+  }
+  renderAll();
+}
 
 function renderAll() {
   renderAuth();
@@ -413,6 +474,14 @@ function renderAll() {
   renderRequests();
   renderAdmin();
   renderMetrics();
+  renderDeliveryCities();
+}
+
+function renderDeliveryCities() {
+  const citySelect = document.querySelector("#deliveryCity");
+  const selectedCity = citySelect.value;
+  citySelect.innerHTML = `<option value="">Select city</option>${serviceAreas.map((area) => `<option value="${area.name}">${area.name}</option>`).join("")}`;
+  citySelect.value = selectedCity;
 }
 
 function renderAuth() {
@@ -453,8 +522,8 @@ function renderProducts() {
           </select>
         </label>
         <div class="product-actions">
-          <button class="button outline" onclick="openProductDetails(${product.id})">View Details</button>
-          <button class="button primary" onclick="addToCart(${product.id})" ${product.stock === 0 ? "disabled" : ""}>${product.stock === 0 ? "Unavailable" : "Add to Cart"}</button>
+          <button class="button outline" onclick="openProductDetails('${product.id}')">View Details</button>
+          <button class="button primary" onclick="addToCart('${product.id}')" ${product.stock === 0 ? "disabled" : ""}>${product.stock === 0 ? "Unavailable" : "Add to Cart"}</button>
         </div>
       </div>
     </article>
@@ -535,7 +604,7 @@ function renderCart() {
           <strong>${product.name}</strong>
           <div class="muted">${item.tenure} months • ₹${product.rent}/month</div>
         </div>
-        <button class="remove-button" onclick="removeFromCart(${product.id})">Remove</button>
+        <button class="remove-button" onclick="removeFromCart('${product.id}')">Remove</button>
       </div>
     `;
   }).join("");
@@ -579,17 +648,18 @@ function renderRentals() {
   `;
 }
 
-function extendRental(rentalId) {
-  rentals = rentals.map((rental) => {
-    if (rental.id !== rentalId) return rental;
-    return { ...rental, tenure: rental.tenure + 1 };
-  });
-  save("renteaseRentals", rentals);
-  renderAll();
-  showToast("Rental extended by one month.");
+async function extendRental(rentalId) {
+  try {
+    await api(`/rentals/${rentalId}`, { method: "PATCH", body: { action: "extend" } });
+    await loadRemoteData();
+    renderAll();
+    showToast("Rental extended by one month.");
+  } catch (error) {
+    showToast(error.message);
+  }
 }
 
-function schedulePickup(rentalId) {
+async function schedulePickup(rentalId) {
   const pickupDateInput = document.querySelector(`#pickup-${rentalId}`);
   const pickupDate = pickupDateInput.value;
 
@@ -598,56 +668,73 @@ function schedulePickup(rentalId) {
     return;
   }
 
-  rentals = rentals.map((rental) => {
-    if (rental.id !== rentalId) return rental;
-    return { ...rental, pickupDate, status: "Pickup Scheduled" };
-  });
-  save("renteaseRentals", rentals);
-  renderAll();
-  showToast("Pickup scheduled. Admin can now mark it returned.");
+  try {
+    await api(`/rentals/${rentalId}`, { method: "PATCH", body: { action: "schedulePickup", pickupDate } });
+    await loadRemoteData();
+    renderAll();
+    showToast("Pickup scheduled. Admin can now mark it returned.");
+  } catch (error) {
+    showToast(error.message);
+  }
 }
 
-function markReturned(rentalId) {
+async function markReturned(rentalId) {
   if (!isAdmin()) {
     showToast("Admin access is required to return rentals.");
     return;
   }
 
-  const rentalToReturn = rentals.find((rental) => rental.id === rentalId);
-  if (!rentalToReturn || rentalToReturn.status === "Returned") return;
-
-  rentals = rentals.map((rental) => {
-    if (rental.id !== rentalId) return rental;
-    return {
-      ...rental,
-      status: "Returned",
-      returnedDate: new Date().toISOString().split("T")[0]
-    };
-  });
-  products = products.map((product) => {
-    return product.id === rentalToReturn.productId
-      ? { ...product, stock: product.stock + 1 }
-      : product;
-  });
-  save("renteaseRentals", rentals);
-  save("renteaseProducts", products);
-  renderAll();
-  showToast("Rental marked as returned.");
+  try {
+    await api(`/rentals/${rentalId}`, { method: "PATCH", body: { action: "return" } });
+    await loadRemoteData();
+    renderAll();
+    showToast("Rental marked as returned.");
+  } catch (error) {
+    showToast(error.message);
+  }
 }
 
-function updateRequestStatus(requestId, status) {
+async function updateRequestStatus(requestId, status) {
   if (!isAdmin()) {
     showToast("Admin access is required to update requests.");
     return;
   }
 
-  requests = requests.map((request) => {
-    if (request.id !== requestId) return request;
-    return { ...request, status, updatedAt: new Date().toLocaleDateString("en-IN") };
-  });
-  save("renteaseRequests", requests);
-  renderAll();
-  showToast(`Request marked ${status.toLowerCase()}.`);
+  try {
+    await api(`/requests/${requestId}`, { method: "PATCH", body: { status } });
+    await loadRemoteData();
+    renderAll();
+    showToast(`Request marked ${status.toLowerCase()}.`);
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function resolveDamageRequest(requestId, outcome) {
+  if (!isAdmin()) {
+    showToast("Admin access is required to resolve damage reports.");
+    return;
+  }
+
+  const chargeInput = document.querySelector(`#damageCharge-${requestId}`);
+  const charge = Number(chargeInput?.value || 0);
+
+  if (outcome === "Damage Charged" && (!Number.isFinite(charge) || charge <= 0)) {
+    showToast("Enter a damage charge greater than zero.");
+    return;
+  }
+
+  try {
+    await api(`/requests/${requestId}`, {
+      method: "PATCH",
+      body: { status: outcome, damageCharge: outcome === "Damage Charged" ? charge : 0 }
+    });
+    await loadRemoteData();
+    renderAll();
+    showToast(outcome === "Damage Charged" ? "Damage charge recorded." : "Damage report closed with no charge.");
+  } catch (error) {
+    showToast(error.message);
+  }
 }
 
 function renderRentalCard(rental) {
@@ -732,6 +819,7 @@ function renderRequests() {
       <strong>${request.type}</strong>
       <p class="muted">${request.productName} • ${request.createdAt} • ${request.status}</p>
       <p>${request.description}</p>
+      ${request.status === "Damage Charged" ? `<p class="damage-charge">Damage charge: ₹${request.damageCharge}</p>` : ""}
     </div>
   `).join("");
 }
@@ -751,8 +839,8 @@ function renderAdmin() {
       <div class="table-row">
         <strong>${product.name}</strong>
         <div class="inventory-actions">
-          <button class="button outline compact-button" onclick="editProduct(${product.id})">Edit</button>
-          <button class="remove-button" onclick="deleteProduct(${product.id})">Remove</button>
+          <button class="button outline compact-button" onclick="editProduct('${product.id}')">Edit</button>
+          <button class="remove-button" onclick="deleteProduct('${product.id}')">Remove</button>
         </div>
         <small>${product.category} • Stock ${product.stock} • Active ${activeCount}</small>
       </div>
@@ -777,6 +865,24 @@ function renderAdmin() {
   adminRequests.innerHTML = requests.length === 0
     ? `<p class="muted">No open requests.</p>`
     : requests.map(renderAdminRequest).join("");
+  adminUsers.innerHTML = users.length === 0
+    ? `<p class="muted">No registered users yet.</p>`
+    : users.map((user) => {
+      const rentalCount = rentals.filter((rental) => rental.userId === user.id).length;
+      return `<div class="table-row"><strong>${user.name}</strong><small>${user.email} &bull; ${user.role} &bull; ${rentalCount} rental${rentalCount === 1 ? "" : "s"}</small></div>`;
+    }).join("");
+
+  serviceAreasList.innerHTML = serviceAreas.map((area) => `
+    <div class="area-row"><span>${area.name}</span><button class="remove-button" onclick="removeServiceArea('${area.id}')">Remove</button></div>
+  `).join("") || `<p class="muted">No service areas configured.</p>`;
+
+  adminAnalytics.innerHTML = analytics ? `
+    <article><strong>${analytics.retentionRate}%</strong><span>Customer retention</span></article>
+    <article><strong>${analytics.averageResolutionHours}h</strong><span>Avg. resolution time</span></article>
+    <article><strong>${analytics.activeRentals}</strong><span>Active rentals</span></article>
+    <article><strong>₹${analytics.mrr}</strong><span>Monthly recurring revenue</span></article>
+  ` : `<p class="muted">Analytics will appear after data is available.</p>`;
+
   /* requests.map((request) => `
         <div class="table-row">
           <strong>${request.type}</strong>
@@ -785,10 +891,25 @@ function renderAdmin() {
       `).join(""); */
 }
 
+async function removeServiceArea(areaId) {
+  if (!isAdmin()) return;
+  try {
+    await api(`/areas/${areaId}`, { method: "DELETE" });
+    await loadRemoteData();
+    renderAll();
+    showToast("Service area removed.");
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
 function renderAdminRequest(request) {
   const customer = users.find((user) => user.id === request.userId);
   const customerName = customer ? customer.name : "Customer";
-  const action = request.status === "Open"
+  const isDamageReport = request.type === "Damage report";
+  const action = isDamageReport
+    ? renderDamageActions(request)
+    : request.status === "Open"
     ? `<button class="button secondary compact-button" onclick="updateRequestStatus('${request.id}', 'In Progress')">Start Work</button>`
     : request.status === "In Progress"
       ? `<button class="button primary compact-button" onclick="updateRequestStatus('${request.id}', 'Resolved')">Mark Resolved</button>`
@@ -806,6 +927,25 @@ function renderAdminRequest(request) {
       <div class="request-actions">${action}</div>
     </div>
   `;
+}
+
+function renderDamageActions(request) {
+  if (request.status === "Open") {
+    return `<button class="button secondary compact-button" onclick="updateRequestStatus('${request.id}', 'Under Review')">Start Assessment</button>`;
+  }
+
+  if (request.status === "Under Review") {
+    return `
+      <label class="damage-charge-input">
+        Damage charge (₹)
+        <input type="number" id="damageCharge-${request.id}" min="1" placeholder="Example: 500" />
+      </label>
+      <button class="button primary compact-button" onclick="resolveDamageRequest('${request.id}', 'Damage Charged')">Confirm Damage</button>
+      <button class="button outline compact-button" onclick="resolveDamageRequest('${request.id}', 'No Damage Found')">No Damage Found</button>
+    `;
+  }
+
+  return `<button class="button outline compact-button" onclick="updateRequestStatus('${request.id}', 'Open')">Reopen</button>`;
 }
 
 function renderMetrics() {
@@ -856,4 +996,4 @@ function getToday() {
   return new Date().toISOString().split("T")[0];
 }
 
-renderAll();
+initializeApp();

@@ -495,6 +495,18 @@ textarea {
   line-height: 1.45;
 }
 
+.damage-charge {
+  margin: 0;
+  color: var(--primary-dark);
+  font-weight: 800;
+}
+
+.damage-charge-input {
+  width: min(190px, 100%);
+  margin: 0;
+  font-size: 0.82rem;
+}
+
 .request-actions {
   justify-content: flex-start;
 }
@@ -524,6 +536,50 @@ textarea {
   margin: 0;
   padding-left: 20px;
   line-height: 2;
+}
+
+.area-form,
+.area-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.area-form {
+  margin-bottom: 12px;
+}
+
+.area-row {
+  justify-content: space-between;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fbfcfe;
+}
+
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.analytics-grid article {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #fbfcfe;
+}
+
+.analytics-grid strong,
+.analytics-grid span {
+  display: block;
+}
+
+.analytics-grid span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
 .modal-backdrop {
