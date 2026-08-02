@@ -86,9 +86,9 @@ let analytics = null;
 let currentUser = load("renteaseCurrentUser", null);
 let authToken = localStorage.getItem("renteaseToken");
 let selectedProductId = null;
-const API_BASE = window.location.port === "3000"
-  ? "/api"
-  : "http://localhost:3000/api";
+const isLocalDevelopment = ["localhost", "127.0.0.1"].includes(window.location.hostname)
+  && window.location.port !== "3000";
+const API_BASE = isLocalDevelopment ? "http://localhost:3000/api" : "/api";
 
 if (!authToken) currentUser = null;
 
